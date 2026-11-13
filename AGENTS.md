@@ -5,7 +5,23 @@
 
 ## 项目概述
 
-Starcat Weekly 后端：聚合阮一峰周刊（ruanyf/weekly）、zread、Show HN（discovery 来源）、HelloGitHub 与受控人工情报（`ai_intelligence`）中的 GitHub 项目，经统一 REST API 提供给 Starcat 前端。多来源写入通用来源事件，GitHub enrich 由后台 Worker 异步完成。生产经 `starcat-api` 聚合部署。
+Starcat Weekly 后端：聚合阮一峰周刊（ruanyf/weekly）、zread、Show HN（discovery 来源）、HelloGitHub 与受控人工情报（`ai_intelligence`）中的 GitHub 项目，经统一 REST API 提供给 Starcat 前端。多来源写入通用来源事件，GitHub enrich 由后台 Worker 异步完成。商业版才经 `starcat-api` 聚合；本工作区运行实例见「当前部署」。
+
+## 当前部署（开源实例，2026-11-13）
+
+本工作区正在运行的 trending、weekly、wiki、recommend、discovery 是开源独立服务，不是商业版 `starcat-api` 聚合网关。排查、调用和改配置时，不要假设流量走 `https://starcat-api.fly.dev` 或请求头 `X-SC-Svc`。`starcat-api` 只适用于商业版。
+
+实例在 SSH 主机 `ten1027` 的 `/home/ubuntu/starcat`，Compose 项目名 `starcat`，五个容器各跑各的进程。端口只绑定服务器 `127.0.0.1`，本机通过 `ssh ten1027` 已配置的 LocalForward 访问：
+
+- trending：`http://127.0.0.1:5002`，数据 `data/trending/trending.db`
+- weekly：`http://127.0.0.1:5003`，数据 `data/weekly/weekly.db` 与 `data/weekly/repo`
+- wiki：`http://127.0.0.1:5004`，数据 `data/wiki/`（部署时为空库，由进程自己创建）
+- recommend：`http://127.0.0.1:5005`，数据 `data/recommend/model-registry`（尚无 ServingBundle，服务在线但没有推荐结果）
+- discovery：`http://127.0.0.1:5006`，数据 `data/discovery/discovery.db`；Linux.do 采集和 Star History 保持关闭
+
+密钥在服务器 `/home/ubuntu/starcat/env/*.env`，权限 `600`。禁止把这些文件、API Key 或 GitHub Token 写入 Git、日志或回复。本地编排副本是与各仓库同级的 `starcat-stack/docker-compose.yml`，该目录不属于任何一个 Git 仓库。服务器 `src/` 只是构建副本，其中 Dockerfile 额外设置了 `GOPROXY=https://goproxy.cn,direct`；各仓库里的 Dockerfile 没有这条。
+
+Starcat 客户端要在设置里把对应服务的 baseURL 指到上述地址，Key 用各仓库 `.env` 里已有的 `API_KEYS`。设置未改时，客户端默认仍会请求聚合网关。跨仓细节见上级 [`../AGENTS.md`](../AGENTS.md)。
 
 ## 技术栈
 
@@ -93,7 +109,7 @@ curl -H "Authorization: Bearer $API_KEY" "http://localhost:5003/api/v1/repos?pag
 
 ## 部署与发布禁令
 
-未经 dong4j 明确授权，禁止：`make release`、`scripts/deploy.sh`、`fly deploy`、`git push`/`git tag`。生产 Fly 仅经 `starcat-api`。
+未经 dong4j 明确授权，禁止：`make release`、`scripts/deploy.sh`、`fly deploy`、`git push`/`git tag`。商业版 Fly 生产才经 `starcat-api`。本工作区开源实例在 `ten1027` 的 Docker Compose，见「当前部署」；不要为了访问这些服务去部署或调用聚合网关。
 
 ## Commit 规范
 
